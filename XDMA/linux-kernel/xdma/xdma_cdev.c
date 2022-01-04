@@ -465,7 +465,8 @@ void xpdev_destroy_interfaces(struct xdma_pci_dev *xpdev)
 				XDMA_MINOR_COUNT);
 }
 
-int xpdev_create_interfaces(struct xdma_pci_dev *xpdev)
+
+int xpdev_create_interfaces(struct xdma_pci_dev *xpdev)//创建字符设备的各种文件操作方法
 {
 	struct xdma_dev *xdev = xpdev->xdev;
 	struct xdma_engine *engine;
@@ -490,7 +491,7 @@ int xpdev_create_interfaces(struct xdma_pci_dev *xpdev)
 			goto fail;
 		}
 	}
-	xpdev_flag_set(xpdev, XDF_CDEV_EVENT);
+	xpdev_flag_set(xpdev, XDF_CDEV_EVENT);//这是在干啥? 设置什么flag??
 
 	/* iterate over channels */
 	for (i = 0; i < xpdev->h2c_channel_max; i++) {
@@ -602,7 +603,7 @@ fail:
 }
 
 int xdma_cdev_init(void)
-{
+{//初始化了两个全局变量
 	g_xdma_class = class_create(THIS_MODULE, XDMA_NODE_NAME);
 	if (IS_ERR(g_xdma_class)) {
 		dbg_init(XDMA_NODE_NAME ": failed to create class");

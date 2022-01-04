@@ -53,7 +53,7 @@ static ssize_t char_events_read(struct file *file, char __user *buf,
 	 * or a signal arrived
 	 */
 	rv = wait_event_interruptible(user_irq->events_wq,
-			user_irq->events_irq != 0);
+			user_irq->events_irq != 0);//TODO 中断处理函数在哪里注册?
 	if (rv)
 		dbg_sg("wait_event_interruptible=%d\n", rv);
 
@@ -109,12 +109,13 @@ static const struct file_operations events_fops = {
 	.owner = THIS_MODULE,
 	.open = char_open,
 	.release = char_close,
-	.read = char_events_read,
+	.read = char_events_read,//events_fops没有write方法
 	.poll = char_events_poll,
 };
 
 void cdev_event_init(struct xdma_cdev *xcdev)
 {
+    pr_info("cdev_event_init, bar : %d\n", xcdev->bar);
 	xcdev->user_irq = &(xcdev->xdev->user_irq[xcdev->bar]);
 	cdev_init(&xcdev->cdev, &events_fops);
 }

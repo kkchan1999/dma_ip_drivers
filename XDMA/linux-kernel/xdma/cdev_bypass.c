@@ -194,5 +194,7 @@ static const struct file_operations bypass_fops = {
 
 void cdev_bypass_init(struct xdma_cdev *xcdev)
 {
-	cdev_init(&xcdev->cdev, &bypass_fops);
+//    xcdev.
+    pr_info("cdev_bypass_init, bar : %d\n", xcdev->bar);
+    cdev_init(&xcdev->cdev, &bypass_fops);
 }

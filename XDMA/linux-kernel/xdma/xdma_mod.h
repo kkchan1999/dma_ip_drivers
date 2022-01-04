@@ -54,6 +54,7 @@
 #define MAGIC_CHAR	0xCCCCCCCCUL
 #define MAGIC_BITSTREAM 0xBBBBBBBBUL
 
+//下面这三个变量是insmod的时候初始化的
 extern unsigned int desc_blen_max;
 extern unsigned int h2c_timeout;
 extern unsigned int c2h_timeout;
@@ -83,14 +84,19 @@ struct xdma_pci_dev {
 	int c2h_channel_max;
 	int h2c_channel_max;
 
+
+    //下面有好多种类型的字符设备, 也不知道哪个才是会用到的...
 	unsigned int flags;
 	/* character device structures */
 	struct xdma_cdev ctrl_cdev;
-	struct xdma_cdev sgdma_c2h_cdev[XDMA_CHANNEL_NUM_MAX];
-	struct xdma_cdev sgdma_h2c_cdev[XDMA_CHANNEL_NUM_MAX];
-	struct xdma_cdev events_cdev[16];
+	struct xdma_cdev sgdma_c2h_cdev[XDMA_CHANNEL_NUM_MAX]; //c2h, 读
+	struct xdma_cdev sgdma_h2c_cdev[XDMA_CHANNEL_NUM_MAX]; //h2c, 写
+	struct xdma_cdev events_cdev[16]; //中断字符设备, 从fops中看到是只能读的
 
+    //下面的设备类型应该还没用得上
 	struct xdma_cdev user_cdev;
+
+    //bypass就是普通的pcie读写操作? 似乎是没有用到DMA的, 并且使用的是另一个BAR, 这点需要注意
 	struct xdma_cdev bypass_c2h_cdev[XDMA_CHANNEL_NUM_MAX];
 	struct xdma_cdev bypass_h2c_cdev[XDMA_CHANNEL_NUM_MAX];
 	struct xdma_cdev bypass_cdev_base;

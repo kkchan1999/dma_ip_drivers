@@ -1204,7 +1204,7 @@ done:
 }
 
 /* engine_service_work */
-static void engine_service_work(struct work_struct *work)
+static void engine_service_work(struct work_struct *work)//这个就是下半部工作队列的处理函数
 {
 	struct xdma_engine *engine;
 	unsigned long flags;
@@ -1366,8 +1366,9 @@ static irqreturn_t user_irq_service(int irq, struct xdma_user_irq *user_irq)
  *
  * @dev_id pointer to xdma_dev
  */
-static irqreturn_t xdma_isr(int irq, void *dev_id)
+static irqreturn_t xdma_isr(int irq, void *dev_id)//中断处理函数
 {
+    //xdma0_events_x用的就是这个中断处理函数, 但是不知道效果是怎样的, 也不知道为什么有16个这样的设备
 	u32 ch_irq;
 	u32 user_irq;
 	u32 mask;
@@ -1375,23 +1376,23 @@ static irqreturn_t xdma_isr(int irq, void *dev_id)
 	struct interrupt_regs *irq_regs;
 
 	dbg_irq("(irq=%d, dev 0x%p) <<<< ISR.\n", irq, dev_id);
-	if (!dev_id) {
+	if (!dev_id) {//检查dev_id指针是否合法? 估计是不同设备共用了同一个中断线
 		pr_err("Invalid dev_id on irq line %d\n", irq);
 		return -IRQ_NONE;
 	}
 	xdev = (struct xdma_dev *)dev_id;
 
-	if (!xdev) {
+	if (!xdev) {//这一步没看懂是什么意思
 		WARN_ON(!xdev);
 		dbg_irq("%s(irq=%d) xdev=%p ??\n", __func__, irq, xdev);
 		return IRQ_NONE;
 	}
 
 	irq_regs = (struct interrupt_regs *)(xdev->bar[xdev->config_bar_idx] +
-					     XDMA_OFS_INT_CTRL);
+					     XDMA_OFS_INT_CTRL);//拿到config_BAR里面的一些东西, 似乎是中断相关的, regs是寄存器的意思?
 
 	/* read channel interrupt requests */
-	ch_irq = read_register(&irq_regs->channel_int_request);
+	ch_irq = read_register(&irq_regs->channel_int_request);//使用了原子读, 读取通道中断请求
 	dbg_irq("ch_irq = 0x%08x\n", ch_irq);
 
 	/*
@@ -1399,10 +1400,10 @@ static irqreturn_t xdma_isr(int irq, void *dev_id)
 	 * after the causing module has been fully serviced.
 	 */
 	if (ch_irq)
-		channel_interrupts_disable(xdev, ch_irq);
+		channel_interrupts_disable(xdev, ch_irq);//关掉一些中断, 暂时不知道为什么, 实际上就是讲ch_irq写到ctrl_bar里的某个位置
 
 	/* read user interrupts - this read also flushes the above write */
-	user_irq = read_register(&irq_regs->user_int_request);
+	user_irq = read_register(&irq_regs->user_int_request);//读取用户中断? 什么鬼?
 	dbg_irq("user_irq = 0x%08x\n", user_irq);
 
 	if (user_irq) {
@@ -1413,7 +1414,7 @@ static irqreturn_t xdma_isr(int irq, void *dev_id)
 		for (; user < max && user_irq; user++, mask <<= 1) {
 			if (user_irq & mask) {
 				user_irq &= ~mask;
-				user_irq_service(irq, &xdev->user_irq[user]);
+				user_irq_service(irq, &xdev->user_irq[user]);//这里不知道是在干嘛, 看得一愣一愣的
 			}
 		}
 	}
@@ -1437,10 +1438,11 @@ static irqreturn_t xdma_isr(int irq, void *dev_id)
 		}
 	}
 
+    //msak就是判断是不是同一个irq, 做出不同的处理
 	mask = ch_irq & xdev->mask_irq_c2h;
 	if (mask) {
 		int channel = 0;
-		int max = xdev->c2h_channel_max;
+		int max = xdev->c2h_channel_max;//似乎有四个
 
 		/* iterate over C2H (PCIe write) */
 		for (channel = 0; channel < max && mask; channel++) {
@@ -1451,7 +1453,7 @@ static irqreturn_t xdma_isr(int irq, void *dev_id)
 			    (engine->magic == MAGIC_ENGINE)) {
 				mask &= ~engine->irq_bitmask;
 				dbg_tfr("schedule_work, %s.\n", engine->name);
-				schedule_work(&engine->work);
+				schedule_work(&engine->work);//使用工作队列, 但是在哪里设置的engine并没有知道
 			}
 		}
 	}
@@ -1575,7 +1577,7 @@ static int map_single_bar(struct xdma_dev *xdev, struct pci_dev *dev, int idx)
 	 * address space
 	 */
 	dbg_init("BAR%d: %llu bytes to be mapped.\n", idx, (u64)map_len);
-	xdev->bar[idx] = pci_iomap(dev, idx, map_len);
+	xdev->bar[idx] = pci_iomap(dev, idx, map_len);//也是用同样的函数, DMA体现在哪里呢?
 
 	if (!xdev->bar[idx]) {
 		pr_info("Could not map BAR %d.\n", idx);
@@ -1732,7 +1734,7 @@ static int map_bars(struct xdma_dev *xdev, struct pci_dev *dev)
 
 		/* Try to identify BAR as XDMA control BAR */
 		if ((bar_len >= XDMA_BAR_SIZE) && (xdev->config_bar_idx < 0)) {
-			if (is_config_bar(xdev, i)) {
+			if (is_config_bar(xdev, i)) {//判断是不是config_bar, 有啥用?
 				xdev->config_bar_idx = i;
 				config_bar_pos = bar_id_idx;
 				pr_info("config bar %d, pos %d.\n",
@@ -2115,7 +2117,7 @@ static int irq_msix_user_setup(struct xdma_dev *xdev)
 }
 
 static int irq_msi_setup(struct xdma_dev *xdev, struct pci_dev *pdev)
-{
+{//这个是驱动用到的中断设置
 	int rv;
 
 	xdev->irq_line = (int)pdev->irq;
@@ -2180,25 +2182,32 @@ static void irq_teardown(struct xdma_dev *xdev)
 	}
 }
 
+//TODO, 要看看这里怎么操作
 static int irq_setup(struct xdma_dev *xdev, struct pci_dev *pdev)
 {
 	pci_keep_intx_enabled(pdev);
 
-	if (xdev->msix_enabled) {
+	if (xdev->msix_enabled) {//rv!=0就是错的
 		int rv = irq_msix_channel_setup(xdev);
-
 		if (rv)
 			return rv;
+
 		rv = irq_msix_user_setup(xdev);
 		if (rv)
 			return rv;
+
+        //上面没有错误之后执行后续操作
 		prog_irq_msix_channel(xdev, 0);
 		prog_irq_msix_user(xdev, 0);
-
+        pr_info("xdev->msix_enabled\n");
 		return 0;
 	} else if (xdev->msi_enabled)
-		return irq_msi_setup(xdev, pdev);
+    {
+        pr_info("xdev->msi_enabled\n");
+        return irq_msi_setup(xdev, pdev);
+    }
 
+    pr_info("irq_legacy_setup\n");
 	return irq_legacy_setup(xdev, pdev);
 }
 
@@ -2876,7 +2885,7 @@ static int engine_init(struct xdma_engine *engine, struct xdma_dev *xdev,
 		 (int)engine->irq_bitmask);
 
 	/* initialize the deferred work for transfer completion */
-	INIT_WORK(&engine->work, engine_service_work);
+	INIT_WORK(&engine->work, engine_service_work);//工作队列在这里初始化
 
 	if (dir == DMA_TO_DEVICE)
 		xdev->mask_irq_h2c |= engine->irq_bitmask;
@@ -4382,7 +4391,7 @@ void *xdma_device_open(const char *mname, struct pci_dev *pdev, int *user_max,
 	pr_info("%s device %s, 0x%p.\n", mname, dev_name(&pdev->dev), pdev);
 
 	/* allocate zeroed device book keeping structure */
-	xdev = alloc_dev_instance(pdev);
+	xdev = alloc_dev_instance(pdev);//似乎是注册一个xdev设备, 然后将这个设备加到某个管理列表里面, 方便驱动去管理?
 	if (!xdev)
 		return NULL;
 	xdev->mod_name = mname;
@@ -4405,14 +4414,14 @@ void *xdma_device_open(const char *mname, struct pci_dev *pdev, int *user_max,
 	if (rv < 0)
 		goto free_xdev;
 
-	rv = pci_enable_device(pdev);
+	rv = pci_enable_device(pdev);//在这里启动pci设备
 	if (rv) {
 		dbg_init("pci_enable_device() failed, %d.\n", rv);
 		goto err_enable;
 	}
 
 	/* keep INTx enabled */
-	pci_check_intr_pend(pdev);
+	pci_check_intr_pend(pdev);//保持INTx是启动的?
 
 	/* enable relaxed ordering */
 	pci_enable_capability(pdev, PCI_EXP_DEVCTL_RELAX_EN);
@@ -4421,7 +4430,7 @@ void *xdma_device_open(const char *mname, struct pci_dev *pdev, int *user_max,
 	pci_enable_capability(pdev, PCI_EXP_DEVCTL_EXT_TAG);
 
 	/* force MRRS to be 512 */
-	rv = pcie_set_readrq(pdev, 512);
+	rv = pcie_set_readrq(pdev, 512);//似乎是PCIe里面的东西了
 	if (rv)
 		pr_info("device %s, error set PCI_EXP_DEVCTL_READRQ: %d.\n",
 			dev_name(&pdev->dev), rv);
@@ -4433,29 +4442,31 @@ void *xdma_device_open(const char *mname, struct pci_dev *pdev, int *user_max,
 	if (rv)
 		goto err_regions;
 
-	rv = map_bars(xdev, pdev);
+	rv = map_bars(xdev, pdev);//将设备区域映射到内核虚拟地址空间
 	if (rv)
 		goto err_map;
 
-	rv = set_dma_mask(pdev);
+	rv = set_dma_mask(pdev);//这是在搞啥?
 	if (rv)
 		goto err_mask;
 
+    //这下面是有关中断的操作
 	check_nonzero_interrupt_status(xdev);
 	/* explicitely zero all interrupt enable masks */
 	channel_interrupts_disable(xdev, ~0);
 	user_interrupts_disable(xdev, ~0);
-	read_interrupts(xdev);
+	read_interrupts(xdev);//这跟刷新缓冲区一个道理
 
-	rv = probe_engines(xdev);
+	rv = probe_engines(xdev);//dma_engines probe, 初始化各种engine
 	if (rv)
 		goto err_mask;
 
-	rv = enable_msi_msix(xdev, pdev);
+	rv = enable_msi_msix(xdev, pdev);//启动msi&msix, 虽然不知道是干嘛的
 	if (rv < 0)
 		goto err_engines;
 
-	rv = irq_setup(xdev, pdev);
+    pr_info("irq_setup\n");
+	rv = irq_setup(xdev, pdev);//设置中断, 经过观察发现使用了msi模式
 	if (rv < 0)
 		goto err_msix;
 

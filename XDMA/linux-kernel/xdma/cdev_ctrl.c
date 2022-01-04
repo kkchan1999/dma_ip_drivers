@@ -260,5 +260,6 @@ static const struct file_operations ctrl_fops = {
 
 void cdev_ctrl_init(struct xdma_cdev *xcdev)
 {
+    pr_info("cdev_ctrl_init bar : %d\n", xcdev->bar);
 	cdev_init(&xcdev->cdev, &ctrl_fops);
 }

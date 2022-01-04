@@ -82,6 +82,7 @@ static void async_io_handler(unsigned long  cb_hndl, int err)
 		goto skip_tran;
 	}
 
+
 	engine = xcdev->engine;
 	xdev = xcdev->xdev;
 
@@ -349,6 +350,7 @@ err_out:
 	return rv;
 }
 
+//这个就是读写h2c/c2h的函数实现
 static ssize_t char_sgdma_read_write(struct file *file, const char __user *buf,
 		size_t count, loff_t *pos, bool write)
 {
@@ -884,6 +886,8 @@ static int char_sgdma_close(struct inode *inode, struct file *file)
 
 	return 0;
 }
+
+//这个fops比较符合我们的用法,似乎就是正常的dma操作方法
 static const struct file_operations sgdma_fops = {
 	.owner = THIS_MODULE,
 	.open = char_sgdma_open,
@@ -905,6 +909,7 @@ static const struct file_operations sgdma_fops = {
 };
 
 void cdev_sgdma_init(struct xdma_cdev *xcdev)
-{
+{//h2c与c2h文件都是用这个来打开的, 所以写入一些内容的话可以看看dma_utils.c里面的方法
+    pr_info("cdev_sgdma_init, bar : %d\n", xcdev->bar);
 	cdev_init(&xcdev->cdev, &sgdma_fops);
 }

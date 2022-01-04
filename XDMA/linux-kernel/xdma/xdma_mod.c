@@ -112,6 +112,9 @@ static const struct pci_device_id pci_ids[] = {
 	{ PCI_DEVICE(0x1d0f, 0xf000), },
 	{ PCI_DEVICE(0x1d0f, 0xf001), },
 
+    /*holowan*/
+    { PCI_DEVICE(0x9527, 0x9527), },
+    { PCI_DEVICE(0x9527, 0x8018), },
 	{0,}
 };
 MODULE_DEVICE_TABLE(pci, pci_ids);
@@ -131,7 +134,7 @@ static void xpdev_free(struct xdma_pci_dev *xpdev)
 }
 
 static struct xdma_pci_dev *xpdev_alloc(struct pci_dev *pdev)
-{
+{//申请并初始化了xpdev这个结构中的某些内容, 例如user_max(意义不明), channel_max(意义不明+1)...
 	struct xdma_pci_dev *xpdev = kmalloc(sizeof(*xpdev), GFP_KERNEL);
 
 	if (!xpdev)
@@ -140,8 +143,8 @@ static struct xdma_pci_dev *xpdev_alloc(struct pci_dev *pdev)
 
 	xpdev->magic = MAGIC_DEVICE;
 	xpdev->pdev = pdev;
-	xpdev->user_max = MAX_USER_IRQ;
-	xpdev->h2c_channel_max = XDMA_CHANNEL_NUM_MAX;
+	xpdev->user_max = MAX_USER_IRQ; //MAX_USER_IRQ == 16, 不知道是用来做什么的
+	xpdev->h2c_channel_max = XDMA_CHANNEL_NUM_MAX; //XDMA_CHANNEL_NUM_MAX == 4
 	xpdev->c2h_channel_max = XDMA_CHANNEL_NUM_MAX;
 
 	xpdev_cnt++;
@@ -155,12 +158,14 @@ static int probe_one(struct pci_dev *pdev, const struct pci_device_id *id)
 	struct xdma_dev *xdev;
 	void *hndl;
 
+    //先申请内存, 并初始化了一些变量...
 	xpdev = xpdev_alloc(pdev);
 	if (!xpdev)
 		return -ENOMEM;
 
+    // read the pci bars and configure the fpga
 	hndl = xdma_device_open(DRV_MODULE_NAME, pdev, &xpdev->user_max,
-			&xpdev->h2c_channel_max, &xpdev->c2h_channel_max);
+			&xpdev->h2c_channel_max, &xpdev->c2h_channel_max);//这个函数似乎直接调用就行了, 最好别改...
 	if (!hndl) {
 		rv = -EINVAL;
 		goto err_out;
@@ -216,11 +221,11 @@ static int probe_one(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	xpdev->xdev = hndl;
 
-	rv = xpdev_create_interfaces(xpdev);
+	rv = xpdev_create_interfaces(xpdev);//创建接口, 估计是cdev的各种操作方法
 	if (rv)
 		goto err_out;
 
-	dev_set_drvdata(&pdev->dev, xpdev);
+	dev_set_drvdata(&pdev->dev, xpdev);//设置私有空间, 一般都是将某个自定义结构体得地址放到device指针里面
 
 	return 0;
 
@@ -363,7 +368,7 @@ static int xdma_mod_init(void)
 	pr_info("desc_blen_max: 0x%x/%u, timeout: h2c %u c2h %u sec.\n",
 		desc_blen_max, desc_blen_max, h2c_timeout, c2h_timeout);
 
-	rv = xdma_cdev_init();
+	rv = xdma_cdev_init();//初始化了两个cdev要用到的全局变量 g_xdma_class, cdev_cache
 	if (rv < 0)
 		return rv;
 

@@ -60,7 +60,7 @@ struct xdma_performance_ioctl {
 
 struct xdma_aperture_ioctl {
 	uint64_t ep_addr;
-	unsigned int aperture;
+	unsigned int aperture;//这tm啥玩意啊?
 	unsigned long buffer;
 	unsigned long len;
 	int error;

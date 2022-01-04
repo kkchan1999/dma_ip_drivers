@@ -618,7 +618,7 @@ struct xdma_dev {
 	int engines_num;	/* Total engine count */
 	u32 mask_irq_h2c;
 	u32 mask_irq_c2h;
-	struct xdma_engine engine_h2c[XDMA_CHANNEL_NUM_MAX];
+	struct xdma_engine engine_h2c[XDMA_CHANNEL_NUM_MAX];//这个是啥?什么时候初始化的?
 	struct xdma_engine engine_c2h[XDMA_CHANNEL_NUM_MAX];
 
 	/* SD_Accel specific */
